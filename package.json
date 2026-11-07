@@ -1,0 +1,7 @@
+{
+  "name": "tg-psy-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Telegram Mini App & Serverless Bot for Business Audit"
+}

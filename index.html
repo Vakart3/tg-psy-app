@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Аудит твоего бизнеса</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --tg-theme-bg-color: #ffffff;
+            --tg-theme-text-color: #000000;
+            --tg-theme-hint-color: #999999;
+            --tg-theme-button-color: #3390ec;
+            --tg-theme-button-text-color: #ffffff;
+            --tg-theme-secondary-bg-color: #f4f4f5;
+        }
+
+        body {
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            touch-action: none;
+            background: radial-gradient(circle at 50% 0%, rgba(51, 144, 236, 0.05) 0%, var(--tg-theme-bg-color) 70%);
+        }
+
+        .color-emoji {
+            font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", emoji !important;
+        }
+
+        .screen {
+            display: none;
+            height: 100vh;
+            padding: 20px;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .card-container {
+            position: relative;
+            width: 100%;
+            max-width: 340px;
+            height: 440px;
+            perspective: 1200px;
+        }
+
+        .card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            border-radius: 32px;
+            padding: 40px 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            cursor: grab;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+            user-select: none;
+            touch-action: none;
+            border: 1px solid rgba(0, 0, 0, 0.03);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 6px;
+            background: linear-gradient(90deg, #3390ec, #60a5fa);
+            opacity: 0.8;
+            border-radius: 32px 32px 0 0;
+        }
+
+        .swipe-indicator {
+            position: absolute;
+            top: 40px;
+            padding: 8px 24px;
+            border-radius: 100px;
+            font-weight: 900;
+            font-size: 1.4rem;
+            text-transform: uppercase;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 10;
+            border: 4px solid;
+            backdrop-filter: blur(4px);
+        }
+
+        .indicator-like { right: 20px; color: #10b981; border-color: #10b981; transform: rotate(-10deg); }
+        .indicator-nope { left: 20px; color: #ef4444; border-color: #ef4444; transform: rotate(10deg); }
+
+        .action-buttons {
+            display: flex; gap: 16px; margin-top: 30px; width: 100%; justify-content: center; align-items: center;
+        }
+
+        .circle-btn {
+            width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; background: #ffffff; box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 1px solid rgba(0,0,0,0.03);
+        }
+
+        .btn-undo { width: 48px; height: 48px; font-size: 18px; opacity: 0.5; pointer-events: none; color: #94a3b8; }
+        .btn-undo.active { opacity: 1; pointer-events: auto; }
+        .btn-nope { color: #ef4444; }
+        .btn-like { color: #10b981; }
+
+        .progress-bar {
+            position: absolute; top: 10px; left: 20px; right: 20px; height: 4px;
+            background: rgba(0,0,0,0.05); border-radius: 10px; overflow: hidden;
+        }
+
+        .progress-fill { height: 100%; background: #3390ec; width: 0%; transition: width 0.3s ease; }
+
+        /* Стили для анкеты */
+        .option-btn {
+            background: #ffffff;
+            border: 2px solid #f1f5f9;
+            border-radius: 16px;
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 14px;
+            font-weight: 600;
+            color: #475569;
+            transition: all 0.2s;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .option-btn.selected {
+            border-color: #3390ec;
+            background: rgba(51,144,236,0.05);
+            color: #3390ec;
+        }
+        .form-input {
+            width: 100%;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 14px 16px;
+            font-size: 14px;
+            color: #1e293b;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 16px;
+            resize: none;
+        }
+        .form-input:focus {
+            border-color: #3390ec;
+            background: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Screen 1: Welcome -->
+    <div id="screen-welcome" class="screen active">
+        <div class="max-w-xs text-center flex flex-col items-center">
+            <div class="text-[70px] leading-none mb-6 color-emoji">🎯</div>
+            <h1 class="text-[32px] font-extrabold mb-4 text-gray-900 leading-tight tracking-tight">Аудит скрытых<br>багов в бизнесе</h1>
+            <p class="text-gray-500 mb-10 text-[15px] leading-relaxed px-2">
+                Проверь все 4 грани своей эффективности за 16 быстрых ответов. В конце ты получишь матрицу своих ограничений.
+            </p>
+            <button onclick="startQualify()" class="w-full bg-[#3390ec] text-white py-4 rounded-2xl font-bold text-lg shadow-[0_8px_20px_rgba(51,144,236,0.3)] hover:bg-blue-600 transition active:scale-95">Поехали</button>
+        </div>
+    </div>
+
+    <!-- Screen 2: Qualify (Роль и доход) -->
+    <div id="screen-qualify" class="screen !justify-start overflow-y-auto py-10 !items-center">
+        <div class="w-full max-w-md px-4 flex flex-col items-center pb-10">
+            <h2 class="text-2xl font-extrabold text-center mb-8 text-gray-900 leading-tight">Давай познакомимся</h2>
+            
+            <div class="w-full mb-6 text-left">
+                <p class="font-bold text-gray-700 mb-3">В какой роли ты сейчас находишься?</p>
+                <div id="role-options">
+                    <button class="option-btn" onclick="selectOption('role', 'Фаундер / Владелец бизнеса', this)">Фаундер / Владелец бизнеса</button>
+                    <button class="option-btn" onclick="selectOption('role', 'Совладелец / Партнер', this)">Совладелец / Партнер</button>
+                    <button class="option-btn" onclick="selectOption('role', 'Автономный эксперт / Продюсер', this)">Автономный эксперт / Продюсер</button>
+                    <button class="option-btn" onclick="selectOption('role', 'Руководитель / Топ-менеджер в найме', this)">Руководитель / Топ-менеджер в найме</button>
+                    <button class="option-btn" onclick="selectOption('role', 'Работаю на себя, пока без команды (Фриланс)', this)">Работаю на себя, пока без команды (Фриланс)</button>
+                </div>
+            </div>
+
+            <div class="w-full mb-8 text-left">
+                <p class="font-bold text-gray-700 mb-3">Твой средний личный доход (чистая прибыль, которую вынимаешь на себя) в месяц:</p>
+                <div id="income-options">
+                    <button class="option-btn" onclick="selectOption('income', 'До 150 000 руб.', this)">До 150 000 руб. (~$1,500)</button>
+                    <button class="option-btn" onclick="selectOption('income', '150 000 — 300 000 руб.', this)">150 000 — 300 000 руб. (~$1,500 — $3,000)</button>
+                    <button class="option-btn" onclick="selectOption('income', '300 000 — 500 000 руб.', this)">300 000 — 500 000 руб. (~$3,000 — $5,000)</button>
+                    <button class="option-btn" onclick="selectOption('income', '500 000 — 1 000 000 руб.', this)">500 000 — 1 000 000 руб. (~$5,000 — $10,000)</button>
+                    <button class="option-btn" onclick="selectOption('income', 'Более 1 000 000 руб.', this)">Более 1 000 000 руб. (от $10,000+)</button>
+                </div>
+            </div>
+
+            <button onclick="goToQuiz()" class="w-full bg-[#3390ec] text-white py-[16px] rounded-[24px] font-bold text-[16px] shadow-[0_6px_16px_rgba(51,144,236,0.3)] flex items-center justify-center active:scale-95 transition-transform">
+                Перейти к вопросам
+            </button>
+        </div>
+    </div>
+
+    <!-- Screen 3: Quiz -->
+    <div id="screen-quiz" class="screen">
+        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+        <div class="card-container" id="card-stack"></div>
+        <div class="action-buttons">
+            <button id="undo-btn" onclick="undoSwipe()" class="circle-btn btn-undo"><span>⟲</span></button>
+            <button onclick="handleManualSwipe('left')" class="circle-btn btn-nope"><span>✕</span></button>
+            <button onclick="handleManualSwipe('right')" class="circle-btn btn-like"><span>❤</span></button>
+        </div>
+    </div>
+
+    <!-- Screen 4: Pre-Result Form (Боль) -->
+    <div id="screen-pre-result" class="screen !justify-start overflow-y-auto py-10 !items-center">
+        <div class="w-full max-w-md px-4 flex flex-col items-center pb-10">
+            <div class="text-[40px] leading-none mb-4 color-emoji">✍️</div>
+            <h2 class="text-2xl font-extrabold text-center mb-2 text-gray-900 leading-tight">Почти готово</h2>
+            <p class="text-[14px] text-gray-600 text-center mb-8 leading-relaxed">
+                Ответь ещё на два вопроса своими словами: так расшифровка будет точнее, а ты сам увидишь картину целиком.
+            </p>
+            
+            <div class="w-full mb-4 text-left">
+                <label class="block font-bold text-gray-800 mb-2 leading-snug">В чём сейчас сильнее всего проявляется затык и какая задача стоит перед бизнесом?</label>
+                <textarea id="form-problem" rows="3" class="form-input" placeholder="Например: не поднимаю цены, всё делаю сам, откладываю разговор с партнёром…"></textarea>
+            </div>
+
+            <div class="w-full mb-8 text-left">
+                <label class="block font-bold text-gray-800 mb-1 leading-snug">Во что тебе это обходится каждый месяц: деньги, время, нервы? Что будет, если ничего не менять ещё полгода?</label>
+                <span class="block text-xs text-gray-500 mb-2">Можно примерно, это только для тебя</span>
+                <textarea id="form-cost" rows="3" class="form-input" placeholder="Я теряю примерно..."></textarea>
+            </div>
+
+            <button onclick="submitPreResultForm()" class="w-full bg-[#3390ec] text-white py-[16px] rounded-[24px] font-bold text-[16px] shadow-[0_6px_16px_rgba(51,144,236,0.3)] flex items-center justify-center active:scale-95 transition-transform">
+                Получить расшифровку
+            </button>
+        </div>
+    </div>
+
+    <!-- Screen 5: Results Matrix & Lead Form -->
+    <div id="screen-result" class="screen !justify-start overflow-y-auto py-10 !items-center"></div>
+
+    <!-- Screen 6: Success -->
+    <div id="screen-success" class="screen">
+        <div class="max-w-xs text-center flex flex-col items-center">
+            <div class="text-[70px] leading-none mb-6 color-emoji">✅</div>
+            <h2 class="text-2xl font-extrabold text-center mb-4 text-gray-900">Спасибо за ответы!</h2>
+            <p class="text-[15px] text-gray-600 text-center leading-relaxed mb-10 px-2">
+                Я изучу результаты твоего аудита и скоро напишу тебе лично, чтобы выбрать удобное время для созвона.
+            </p>
+            <button onclick="tg.close()" class="w-full bg-[#3390ec] text-white py-[16px] rounded-[24px] font-bold text-[16px] shadow-[0_6px_16px_rgba(51,144,236,0.3)] flex items-center justify-center active:scale-95 transition-transform">
+                Закрыть приложение
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        let analyticsData = {
+            answers: [], 
+            winningCategories: [], 
+            winningScore: 0, 
+            isMix: false, 
+            openedTabs: [],
+            role: null,
+            income: null,
+            problem: null,
+            cost: null,
+            contact: null,
+            ctaClicked: false
+        };
+
+        const questions = [
+            { text: "Проще сделать самому, чем три часа объяснять. Поэтому часто доделываю работу за командой.", category: "control", strong: false, id: 1 },
+            { text: "Боюсь назвать высокий чек. А вдруг клиент заплатит, а я не дам ему того результата, которого он ждёт?", category: "scale", strong: true, id: 5 },
+            { text: "В спорных моментах с партнёром обычно уступаю, даже когда знаю, что прав.", category: "boundaries", strong: false, id: 9 },
+            { text: "Закрываю хорошую сделку, а радости нет. Пришли деньги — «ну ок, работаем дальше».", category: "meaning", strong: false, id: 13 },
+            { text: "Если пару часов не отвечаю в чатах, начинаю переживать, что без меня всё встанет.", category: "control", strong: false, id: 2 },
+            { text: "Фоном живёт мысль, что мой успех — просто везение, и однажды это всплывёт.", category: "scale", strong: false, id: 6 },
+            { text: "Долго терплю сотрудника, который косячит, потому что откладываю тяжёлый разговор.", category: "boundaries", strong: false, id: 10 },
+            { text: "Ловлю себя на мысли: «А ради чего я вообще всё это на себе тащу?»", category: "meaning", strong: false, id: 14 },
+            { text: "Знаю, что делать для роста, но на это нет времени: день съедают пожары и текучка.", category: "control", strong: false, id: 3 },
+            { text: "Прямо предлагать свой продукт неловко. Кажется, если я профи, клиенты должны приходить сами.", category: "scale", strong: false, id: 7 },
+            { text: "Соглашаюсь на невыгодные условия или скидку, лишь бы не испортить отношения.", category: "boundaries", strong: true, id: 11 },
+            { text: "Время на рост можно найти, но нет желания. Цели, которые раньше зажигали, уже закрыты.", category: "meaning", strong: true, id: 15 },
+            { text: "Сложно отдать задачу: всё равно сделают не так, и придётся переделывать.", category: "control", strong: true, id: 4 },
+            { text: "Иногда ловлю себя на мысли: «Если я такой крутой, почему у меня нет потока заказов?»", category: "scale", strong: false, id: 8 },
+            { text: "Мне сложно сказать клиенту «нет», даже когда он просит больше, чем мы договаривались.", category: "boundaries", strong: false, id: 12 },
+            { text: "Кажется, копятся долги перед жизнью: всё важное для себя откладываю на «потом».", category: "meaning", strong: false, id: 16 }
+        ];
+
+        const descriptions = {
+            control: { 
+                name: "Контроль", emoji: "&#x1F3D7;&#xFE0F;", diag: "Архитектор, который застрял в операционке", 
+                zero_text: "Ты умеешь делегировать и доверять команде. Бизнес не завязан на твоем гиперконтроле. Операционка тебя не душит и это прочный фундамент для роста.",
+                what: "Ты держишь на себе почти всё и, скорее всего, давно от этого устал. Бизнес растёт ровно настолько, насколько хватает твоих сил и часов в сутках. Ты строил компанию, а по факту работаешь в ней главным исполнителем.", 
+                attention: "Текучка бывает удобной. Пока день забит мелкими задачами и переделками за командой, есть честный ответ на вопрос, почему не до стратегии. Попробуй представить, что на выходных телефон выключен полностью. Что первым приходит в голову: страх, что всё развалится, или тревога, которая всплывёт, когда станет тихо?", 
+                advice: "Вспомни, когда ты последний раз думал: «Проще сделать самому, чем три часа объяснять». Выпиши три такие задачи. Одну отдай уже завтра и заранее согласись, что её сделают на 80% от твоего идеала." 
+            },
+            scale: { 
+                name: "Масштаб", emoji: "&#x1F3AD;", diag: "Тихий самозванец", 
+                zero_text: "Ты адекватно оцениваешь свою ценность и продукт. Синдром самозванца не тормозит тебя, когда нужно называть чеки или заявлять о себе.",
+                what: "Внутри живёт страх: а вдруг я не дам клиенту результат? Из-за него ты сам притормаживаешь рост. Не поднимаешь чек, откладываешь продажи, выбираешь оставаться в тени.", 
+                attention: "Знакомо чувство, что успех немного случайный? Отсюда и ощущение, что прямо предлагать свой продукт почти стыдно. Как сказал один из предпринимателей: «Если ты такой крутой, почему у тебя нет заказов?» Психика бережёт от этого стыда, но платишь ты деньгами.", 
+                advice: "Вспомни трёх клиентов, у которых после работы с тобой точно что-то изменилось, и лучше в цифрах. Люди платят не за то, чтобы ты был безупречным. Они платят за решение своей задачи. Есть цифра чека, которую ты пишешь в переписке и стираешь? Назови её следующему клиенту." 
+            },
+            boundaries: { 
+                name: "Границы", emoji: "&#x1F91D;", diag: "Слишком удобный партнёр", 
+                zero_text: "Ты умеешь держать фокус на своих интересах и не спасаешь других в ущерб прибыли. Сложные разговоры для тебя - это просто часть работы, а не стресс.",
+                what: "Ты стараешься, чтобы всем было хорошо: партнёрам, инвесторам, команде, клиентам. А свои интересы часто оказываются в конце списка.", 
+                attention: "Как в самолёте: вместо себя, кислородную маску ты сначала надеваешь всем вокруг. А если на тебя не хватило, просто задерживаешь дыхание и терпишь. Соглашаться на невыгодное, лишь бы всё не развалилось - это тоже решение. Просто оплачивается оно твоей долей прибыли и твоими силами.", 
+                advice: "Позиция «хорошего парня» в бизнесе почти всегда стоит денег. Вспомни случай за последний месяц, когда ты уступил, хотя знал, что прав. Теперь подготовься к тому разговору, который давно висит. Опирайся не на эмоции и страх, что тебя отвергнут, а на цифры и факты." 
+            },
+            meaning: { 
+                name: "Смыслы", emoji: "&#x1F9ED;", diag: "На автопилоте", 
+                zero_text: "Ты четко понимаешь, ради чего всё это строишь. Внутренний драйв на месте, и ты двигаешься вперед не просто по инерции.",
+                what: "Ты продолжаешь крутить педали, но уже по инерции. То, что раньше зажигало, больше не работает.", 
+                attention: "Даже хорошие деньги и закрытые сделки не радуют так, как раньше. Пришла оплата «ну ок, работаем дальше». А всё важное для себя копится долгами перед жизнью. Ради чего ты сейчас тащишь всё это?", 
+                advice: "Вспомни, что по-настоящему зажигало тебя в начале. Разреши себе признать: старые цели (заработать на жизнь, квартиру, машину) уже закрыты, и нормально, что они больше не дают энергии." 
+            }
+        };
+
+        let scores = { control: 0, scale: 0, boundaries: 0, meaning: 0 };
+        let strongScores = { control: 0, scale: 0, boundaries: 0, meaning: 0 };
+        let history = [];
+        let currentCardIndex = 0;
+        let isAnimating = false;
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen-' + id).classList.add('active');
+        }
+
+        function startQualify() {
+            showScreen('qualify');
+        }
+
+        function selectOption(type, value, element) {
+            analyticsData[type] = value;
+            const container = document.getElementById(`${type}-options`);
+            container.querySelectorAll('.option-btn').forEach(btn => btn.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+
+        function goToQuiz() {
+            if (!analyticsData.role || !analyticsData.income) {
+                tg.showAlert('Пожалуйста, выбери варианты в обоих вопросах.');
+                return;
+            }
+            showScreen('quiz');
+            renderCards();
+            updateProgress();
+        }
+
+        function renderCards() {
+            const container = document.getElementById('card-stack');
+            container.innerHTML = '';
+            questions.forEach((q, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="swipe-indicator indicator-like">ДА</div>
+                    <div class="swipe-indicator indicator-nope">НЕТ</div>
+                    <div class="text-xs font-bold text-blue-500 uppercase tracking-widest opacity-60 mt-2">Вопрос ${index + 1} / 16</div>
+                    <div class="text-[19px] font-bold text-gray-800 leading-snug my-auto">${q.text}</div>
+                    <div class="w-full border-t pt-4 pb-2 flex justify-center">
+                        <div class="flex gap-1.5">
+                            <div class="w-1.5 h-1.5 rounded-full bg-blue-200"></div>
+                            <div class="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+                            <div class="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
+                        </div>
+                    </div>
+                `;
+                setupSwipe(card, q);
+                container.appendChild(card);
+            });
+            updateStackView();
+        }
+
+        function updateStackView() {
+            const visibleCards = Array.from(document.querySelectorAll('.card')).filter(c => c.style.display !== 'none');
+            visibleCards.forEach((card, i) => {
+                card.style.zIndex = questions.length - i;
+                const scale = 1 - (i * 0.05);
+                const translateY = i * -10;
+                if (i === 0) {
+                    card.style.transform = 'translateY(0) scale(1)';
+                    card.style.opacity = '1';
+                    card.style.pointerEvents = 'auto';
+                } else {
+                    card.style.transform = `translateY(${translateY}px) scale(${scale})`;
+                    card.style.opacity = i > 2 ? '0' : '1';
+                    card.style.pointerEvents = 'none';
+                }
+            });
+        }
+
+        function setupSwipe(card, q) {
+            let startX, moveX;
+            let isDragging = false;
+            card.onpointerdown = (e) => { if (isAnimating) return; isDragging = true; startX = e.clientX; card.style.transition = 'none'; card.setPointerCapture(e.pointerId); };
+            card.onpointermove = (e) => {
+                if (!isDragging) return;
+                moveX = e.clientX - startX;
+                card.style.transform = `translate(${moveX}px, 0) rotate(${moveX / 15}deg)`;
+                card.querySelector('.indicator-like').style.opacity = Math.max(0, moveX / 100);
+                card.querySelector('.indicator-nope').style.opacity = Math.max(0, -moveX / 100);
+            };
+            card.onpointerup = (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                if (Math.abs(moveX) > 100) swipeCard(card, moveX > 0 ? 'right' : 'left', q);
+                else { card.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'; card.style.transform = 'translate(0, 0) rotate(0deg)'; card.querySelectorAll('.swipe-indicator').forEach(i => i.style.opacity = 0); }
+                moveX = 0;
+            };
+        }
+
+        function swipeCard(card, direction, q) {
+            isAnimating = true;
+            card.style.transition = 'transform 0.5s ease-in, opacity 0.3s';
+            card.style.transform = `translate(${direction === 'right' ? 1000 : -1000}px, 0) rotate(${direction === 'right' ? 30 : -30}deg)`;
+            card.style.opacity = '0';
+            
+            history.push({ q, direction });
+            analyticsData.answers.push({ id: q.id, category: q.category, answer: direction });
+            
+            if (direction === 'right') {
+                scores[q.category]++;
+                if (q.strong) strongScores[q.category] = 1;
+            }
+            
+            setTimeout(() => {
+                card.style.display = 'none';
+                currentCardIndex++;
+                updateProgress();
+                updateStackView();
+                isAnimating = false;
+                
+                if (currentCardIndex >= questions.length) {
+                    showScreen('pre-result');
+                }
+            }, 300);
+        }
+
+        function handleManualSwipe(dir) {
+            const cards = Array.from(document.querySelectorAll('.card')).filter(c => c.style.display !== 'none');
+            if (cards.length > 0 && !isAnimating) swipeCard(cards[0], dir, questions[currentCardIndex]);
+        }
+
+        function undoSwipe() {
+            if (history.length === 0 || isAnimating) return;
+            isAnimating = true;
+            const last = history.pop();
+            analyticsData.answers.pop();
+
+            if (last.direction === 'right') {
+                scores[last.q.category]--;
+                if (last.q.strong) strongScores[last.q.category] = 0;
+            }
+            
+            currentCardIndex--;
+            const card = document.querySelectorAll('.card')[currentCardIndex];
+            card.style.display = 'flex';
+            card.style.transition = 'none';
+            card.style.transform = `translate(${last.direction === 'right' ? 1000 : -1000}px, 0) rotate(30deg)`;
+            updateStackView();
+            updateProgress();
+            
+            setTimeout(() => {
+                card.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                card.style.transform = 'translate(0, 0) rotate(0deg)';
+                card.style.opacity = '1';
+                card.querySelectorAll('.swipe-indicator').forEach(i => i.style.opacity = 0);
+                setTimeout(() => isAnimating = false, 500);
+            }, 50);
+        }
+
+        function updateProgress() {
+            document.getElementById('progress-fill').style.width = `${(currentCardIndex / questions.length) * 100}%`;
+            document.getElementById('undo-btn').classList.toggle('active', history.length > 0);
+        }
+
+        function submitPreResultForm() {
+            const problemVal = document.getElementById('form-problem').value.trim();
+            const costVal = document.getElementById('form-cost').value.trim();
+
+            if (!problemVal || !costVal) {
+                tg.showAlert('Пожалуйста, заполни оба поля своими словами, чтобы результаты были точнее.');
+                return;
+            }
+
+            analyticsData.problem = problemVal;
+            analyticsData.cost = costVal;
+            
+            finishQuiz();
+        }
+
+        function toggleAccordion(cat) {
+            const content = document.getElementById(`content-${cat}`);
+            const icon = document.getElementById(`icon-${cat}`);
+            
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+                if (!analyticsData.openedTabs.includes(cat)) {
+                    analyticsData.openedTabs.push(cat);
+                }
+            } else {
+                content.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function renderDotOrNumber(score, isTop) {
+            if (isTop && score > 0) {
+                return `<div class="w-8 h-8 flex items-center justify-center rounded-full bg-[#3390ec] text-white font-bold text-sm shadow-md">${score}</div>`;
+            }
+            return `<div class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-50 text-blue-400 font-bold text-sm">${score}</div>`;
+        }
+
+        function sendAnalyticsToBackend() {
+            const payload = {
+                ...analyticsData,
+                user: tg.initDataUnsafe?.user || null,
+            };
+            fetch('/api/lead', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                keepalive: true,
+            }).catch((e) => console.error('Lead send error:', e));
+        }
+
+        function fireAnalyticsAndRedirect() {
+            analyticsData.ctaClicked = true;
+            
+            const contactVal = document.getElementById('form-contact') ? document.getElementById('form-contact').value.trim() : '';
+            if (contactVal) analyticsData.contact = contactVal;
+
+            sendAnalyticsToBackend();
+            tg.openTelegramLink('https://t.me/artvak');
+        }
+
+        function finishQuiz() {
+            const screenResult = document.getElementById('screen-result');
+            const tgUser = tg.initDataUnsafe?.user;
+            const defaultContact = tgUser?.username ? '@' + tgUser.username : '';
+            
+            const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
+            if (totalScore === 0) {
+                screenResult.innerHTML = `
+                    <div class="w-full max-w-md px-4 flex flex-col items-center justify-center min-h-[70vh]">
+                        <div class="text-[70px] leading-none mb-6 color-emoji">🎉</div>
+                        <h2 class="text-2xl font-extrabold text-center mb-4 text-gray-900">Всё чисто!</h2>
+                        <p class="text-[15px] text-gray-600 text-center leading-relaxed mb-10 px-2">
+                            Похоже, сейчас ни один из паттернов тебя не держит. Если захочется проверить глубже, можно записаться на бесплатную диагностику.
+                        </p>
+                        <button onclick="fireAnalyticsAndRedirect()" class="w-full bg-[#3390ec] text-white py-[16px] rounded-[24px] font-bold text-[16px] shadow-[0_6px_16px_rgba(51,144,236,0.3)] flex items-center justify-center active:scale-95 transition-transform">
+                            Записаться на разбор
+                        </button>
+                        <button onclick="resetTest()" class="w-full text-[#94a3b8] text-[13px] font-extrabold uppercase tracking-[0.1em] py-3 mt-4 active:scale-95 transition-transform">
+                            Пройти заново
+                        </button>
+                    </div>
+                `;
+                showScreen('result');
+                tg.HapticFeedback.notificationOccurred('success');
+                return;
+            }
+
+            let maxEffScore = -1;
+            for (const cat in scores) {
+                const eff = scores[cat] * 10 + strongScores[cat];
+                if (eff > maxEffScore) maxEffScore = eff;
+            }
+            
+            const isTopCat = (cat) => (scores[cat] * 10 + strongScores[cat] === maxEffScore) && scores[cat] > 0;
+            const topCategories = Object.keys(scores).filter(isTopCat);
+            
+            analyticsData.winningCategories = topCategories;
+            analyticsData.winningScore = scores[topCategories[0]];
+            analyticsData.isMix = topCategories.length > 1;
+
+            const mapScore = (s) => 50 + (s / 4 * 40); 
+            const mapScoreNeg = (s) => 50 - (s / 4 * 40); 
+            
+            const bridgeHtml = `
+                <div class="w-full bg-blue-50/50 rounded-2xl p-5 mb-8 text-left border border-blue-100/50">
+                    <p class="text-[13px] text-gray-700 mb-3"><strong>Ты написал, что теряешь:</strong><br> <i class="text-gray-600">«${analyticsData.cost}»</i></p>
+                    <p class="text-[13px] text-gray-700 leading-relaxed mb-3">
+                        Это не про лень и не про слабую команду. Обычно за такими симптомами стоит один внутренний сценарий: он включается перед важным действием и делает рутину безопаснее, чем решение. Поэтому знания и инструменты есть, а внедрения нет.
+                    </p>
+                    <p class="text-[13px] text-gray-900 leading-relaxed font-semibold">
+                        Хорошая новость: такой сценарий можно найти и отключить точечно, без долгих раскопок.
+                    </p>
+                </div>
+            `;
+
+            let matrixHtml = `
+                <div class="w-full max-w-md px-4 flex flex-col items-center">
+                    <h2 class="text-2xl font-extrabold text-center mb-1 text-gray-900">Твой результат</h2>
+                    <p class="text-sm text-gray-500 text-center mb-6">Симптомы по тесту</p>
+                    
+                    <div class="relative w-full aspect-square max-w-[280px] bg-white rounded-3xl shadow-sm border border-gray-100 p-2 mb-6">
+                        <div class="absolute inset-0 pointer-events-none p-2">
+                            <div class="absolute top-1/2 left-2 right-2 h-px bg-gray-100"></div>
+                            <div class="absolute left-1/2 top-2 bottom-2 w-px bg-gray-100"></div>
+                        </div>
+                        
+                        <div class="absolute w-full h-full pointer-events-none z-10">
+                            <div class="matrix-point" style="left: ${mapScoreNeg(scores.control)}%; top: ${mapScoreNeg(scores.control)}%"></div>
+                            <div class="matrix-point" style="left: ${mapScore(scores.scale)}%; top: ${mapScoreNeg(scores.scale)}%"></div>
+                            <div class="matrix-point" style="left: ${mapScoreNeg(scores.meaning)}%; top: ${mapScore(scores.meaning)}%"></div>
+                            <div class="matrix-point" style="left: ${mapScore(scores.boundaries)}%; top: ${mapScore(scores.boundaries)}%"></div>
+                        </div>
+
+                        <div class="grid grid-cols-2 h-full relative z-20">
+                            <div class="flex flex-col items-center justify-center p-2 rounded-tl-2xl ${isTopCat('control') ? 'bg-blue-50/50' : ''}">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase mb-2">Контроль</span>
+                                ${renderDotOrNumber(scores.control, isTopCat('control'))}
+                            </div>
+                            <div class="flex flex-col items-center justify-center p-2 rounded-tr-2xl ${isTopCat('scale') ? 'bg-blue-50/50' : ''}">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase mb-2">Масштаб</span>
+                                ${renderDotOrNumber(scores.scale, isTopCat('scale'))}
+                            </div>
+                            <div class="flex flex-col items-center justify-center p-2 rounded-bl-2xl ${isTopCat('meaning') ? 'bg-blue-50/50' : ''}">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase mb-2">Смыслы</span>
+                                ${renderDotOrNumber(scores.meaning, isTopCat('meaning'))}
+                            </div>
+                            <div class="flex flex-col items-center justify-center p-2 rounded-br-2xl ${isTopCat('boundaries') ? 'bg-blue-50/50' : ''}">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase mb-2">Границы</span>
+                                ${renderDotOrNumber(scores.boundaries, isTopCat('boundaries'))}
+                            </div>
+                        </div>
+                    </div>
+
+                    ${bridgeHtml}
+
+                    <div id="matrix-details" class="w-full text-left"></div>
+                    <div id="cta-block" class="w-full mt-6 mb-6"></div>
+                </div>
+            `;
+            
+            screenResult.innerHTML = matrixHtml;
+            const container = document.getElementById('matrix-details');
+            
+            if (topCategories.length > 1) {
+                let numWord = topCategories.length === 2 ? 'два' : topCategories.length === 3 ? 'три' : 'четыре';
+                container.innerHTML = `<h3 class="text-[19px] font-extrabold text-gray-900 mb-4 mt-2 text-center">У тебя ${numWord} ведущих паттерна</h3>`;
+            }
+
+            const sortedCategories = Object.keys(scores).sort((a, b) => {
+                return (scores[b] * 10 + strongScores[b]) - (scores[a] * 10 + strongScores[a]);
+            });
+
+            let cardsHtml = '';
+            sortedCategories.forEach((cat) => {
+                const score = scores[cat];
+                const info = descriptions[cat];
+                const isTop = isTopCat(cat);
+                
+                let diagHtml = '';
+                let contentHtml = '';
+
+                if (score === 0) {
+                    // Если 0 баллов - просто хвалим внутри свернутой карточки
+                    contentHtml = `<p class="text-gray-700 font-medium leading-relaxed">${info.zero_text}</p>`;
+                } else if (score === 1) {
+                    diagHtml = `<h3 class="text-[18px] font-black mb-4 text-[#3390ec]">${info.diag}</h3>`;
+                    contentHtml = `
+                        <p><strong class="text-gray-900 font-bold block mb-1">Что это значит:</strong>${info.what}</p>
+                        <p><strong class="text-gray-900 font-bold block mb-1">Обрати внимание:</strong>${info.attention}</p>
+                    `;
+                } else if (score >= 2) {
+                    diagHtml = `<h3 class="text-[18px] font-black mb-4 text-[#3390ec]">${info.diag}</h3>`;
+                    contentHtml = `
+                        <p><strong class="text-gray-900 font-bold block mb-1">Что это значит:</strong>${info.what}</p>
+                        <p><strong class="text-gray-900 font-bold block mb-1">Обрати внимание:</strong>${info.attention}</p>
+                        <p><strong class="text-gray-900 font-bold block mb-1">Совет:</strong>${info.advice}</p>
+                    `;
+                }
+                
+                if (isTop) {
+                    let topIntroText = '';
+                    if (score === 3 || score === 4) {
+                        const word = score === 4 ? 'четыре' : 'три';
+                        topIntroText = `
+                            <div class="mb-4 p-4 bg-blue-50/70 border border-blue-100 rounded-xl">
+                                <p class="text-[#3390ec] font-medium text-[13px] leading-relaxed">
+                                    <strong>Все ${word} утверждения про тебя.</strong> Похоже, здесь есть место, где бизнес застрял, и изнутри его сложно разглядеть. На бесплатной диагностике за 30 минут найдём, что именно тормозит, и поймём, сколько шагов до выхода.
+                                </p>
+                            </div>
+                        `;
+                    }
+
+                    cardsHtml += `
+                        <div class="bg-white rounded-[24px] p-5 border-2 border-[#3390ec] shadow-[0_8px_20px_rgba(51,144,236,0.12)] mb-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xl color-emoji">${info.emoji}</span>
+                                    <span class="font-bold text-gray-500 uppercase text-xs tracking-wider">${info.name}</span>
+                                </div>
+                                <div class="text-[#3390ec] font-black text-sm bg-blue-50 px-3 py-1 rounded-full">${score}/4</div>
+                            </div>
+                            ${diagHtml}
+                            ${topIntroText}
+                            <div class="text-[13px] text-gray-700 space-y-3 leading-relaxed">
+                                ${contentHtml}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    cardsHtml += `
+                        <div class="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden mb-4">
+                            <div class="p-5 flex justify-between items-center cursor-pointer transition active:bg-gray-50" onclick="toggleAccordion('${cat}')">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xl color-emoji">${info.emoji}</span>
+                                    <span class="font-bold text-gray-700 uppercase text-xs tracking-wider">${info.name}</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="text-blue-400 font-black text-sm bg-blue-50 px-3 py-1 rounded-full">${score}/4</div>
+                                    <svg id="icon-${cat}" class="w-5 h-5 text-gray-400 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                            </div>
+                            <div id="content-${cat}" class="hidden px-5 pb-5 border-t border-gray-50">
+                                <div class="mt-4">
+                                    ${diagHtml}
+                                    <div class="text-[13px] text-gray-700 space-y-3 leading-relaxed">
+                                        ${contentHtml}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            container.innerHTML += cardsHtml;
+
+            const numTextMap = {
+                1: "Одно утверждение",
+                2: "Два утверждения",
+                3: "Все три утверждения",
+                4: "Все четыре утверждения"
+            };
+            const startText = numTextMap[analyticsData.winningScore] || "Эти утверждения";
+
+            document.getElementById('cta-block').innerHTML = `
+                <div class="bg-[#f8fafc] border border-[#e2e8f0] rounded-[24px] p-5 w-full max-w-sm mx-auto shadow-sm">
+                    <div class="flex items-center gap-3 mb-4">
+                        <img src="https://ui-avatars.com/api/?name=Артем+Ваксер&background=3390ec&color=fff&size=128" alt="Артем" class="w-12 h-12 rounded-full object-cover shrink-0 shadow-sm border border-white">
+                        <div class="flex flex-col">
+                            <span class="text-[12px] font-extrabold text-gray-900 uppercase tracking-wide">Артем Ваксер</span>
+                            <span class="text-[11px] text-gray-500">Integral Psychologist & Coach</span>
+                        </div>
+                    </div>
+                    <h3 class="text-[16px] font-extrabold text-gray-900 mb-2">Если хочешь разобраться глубже</h3>
+                    <p class="text-[13px] text-gray-700 mb-4 leading-relaxed">
+                        На этой неделе я провожу 5 бесплатных разборов. За час найдём затык, который тормозит твои решения, и соберём план, что с ним делать. Твои ответы выше у меня уже будут, начнём сразу с сути.
+                    </p>
+                    <label class="block text-[13px] font-bold text-gray-700 mb-2">Оставь Telegram или телефон:</label>
+                    <input type="text" id="form-contact" class="form-input mb-4" value="${defaultContact}" placeholder="@username или номер">
+                    
+                    <button onclick="submitLeadForm()" class="w-full bg-[#3390ec] text-white py-[16px] rounded-[24px] font-bold text-[16px] shadow-[0_6px_16px_rgba(51,144,236,0.3)] flex items-center justify-center active:scale-95 transition-transform mb-3">
+                        Записаться на разбор
+                    </button>
+                    
+                    <p class="text-[12px] text-gray-400 text-center leading-tight">
+                        Или просто сохрани результат. Это тоже полезно.
+                    </p>
+                </div>
+                
+                <button onclick="shareResult()" class="w-full bg-white border-[2px] border-[#2d87e0] text-[#2d87e0] py-[14px] rounded-[24px] font-bold text-[16px] flex items-center justify-center gap-2 active:scale-95 transition-transform mt-4 mb-2 max-w-sm mx-auto">
+                    Поделиться результатом
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+                </button>
+                <button onclick="resetTest()" class="w-full text-[#94a3b8] text-[13px] font-extrabold uppercase tracking-[0.1em] py-3 max-w-sm mx-auto block active:scale-95 transition-transform">
+                    Пройти заново
+                </button>
+            `;
+
+            showScreen('result');
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+
+        function submitLeadForm() {
+            const contactVal = document.getElementById('form-contact').value.trim();
+            analyticsData.contact = contactVal;
+            analyticsData.ctaClicked = !!contactVal;
+            
+            sendAnalyticsToBackend();
+            showScreen('success');
+        }
+
+        function shareResult() {
+            const sorted = Object.entries(scores).sort((a, b) => (scores[b] * 10 + strongScores[b]) - (scores[a] * 10 + strongScores[a]));
+            const topDiag = descriptions[sorted[0][0]].diag;
+            const text = encodeURIComponent(`Мой результат в аудите бизнеса: "${topDiag}". Узнай свои блокировки:`);
+            const url = "https://t.me/share/url?url=" + encodeURIComponent(window.location.href) + "&text=" + text;
+            tg.openTelegramLink(url);
+        }
+
+        function resetTest() {
+            scores = { control: 0, scale: 0, boundaries: 0, meaning: 0 };
+            strongScores = { control: 0, scale: 0, boundaries: 0, meaning: 0 };
+            analyticsData = { answers: [], winningCategories: [], winningScore: 0, isMix: false, openedTabs: [], role: null, income: null, problem: null, cost: null, contact: null, ctaClicked: false };
+            currentCardIndex = 0;
+            history = [];
+            showScreen('welcome');
+        }
+    </script>
+</body>
+</html>
